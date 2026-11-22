@@ -59,6 +59,13 @@ paper uses the 50K/v1 panel instead. LT is not used by any script here.
    scripts (included for provenance; the shards in `data/main/` are
    already the frozen output, so these do not need to be re-run for exact
    reproduction).
+10. `code/main/12_discount_scenario.py` -- combined predicted promotion
+   effect L_m(d) for matched G and M at five discount depths, and the paired
+   18-city block bootstrap (seed 42, 5,000 resamples; reported difference is
+   G minus M in percentage points). Needs the raw parquet (`FRN_PARQUET`) and
+   `data/main/decomp_cells.csv`; writes `cell_max_depth.csv`,
+   `discount_scenario_L.csv`, `discount_scenario_jointboot.json` (frozen
+   copies included, rerun is bit-identical).
 
 ## What's deliberately excluded
 
