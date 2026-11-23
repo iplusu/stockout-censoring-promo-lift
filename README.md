@@ -41,7 +41,7 @@ Defects corrected (details: `data/correction/repair_log.md`):
 5. The same tail floor in the NB2, ZIP and mixture alternatives is replaced (`altmodels_corrected.py`).
 
 Run order (`OMP_NUM_THREADS=1`; set `FRN_PARQUET` to the raw `train.parquet`):
-1. `python validate_corrected.py` writes `numeric_validation.log` (26/26 checks). `python altmodels_corrected.py`
+1. `python validate_corrected.py` writes `numeric_validation.log` (25/25 checks). `python altmodels_corrected.py`
    runs the alternative-model self-check.
 2. `python replay_e2.py` then `python compare_replay.py`: freeze the E2 inputs with the unmodified legacy generator.
    This is a documented reconstruction: keys and true coefficients are identical for all 35,100 datasets, and the

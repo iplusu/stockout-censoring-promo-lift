@@ -34,6 +34,10 @@ for col, src in [('legacy_replay_converged', 'status'), ('legacy_replay_b_p', 'b
     c.loc[m, col] = v[m]
 c = c.rename(columns={'status': 'corrected_status', 'valid': 'corrected_valid', 'b_p': 'corrected_b_p', 'b_d': 'corrected_b_d'})
 c.insert(0, 'source', 'E2')
+st = pd.concat([pd.read_csv(x, usecols=KEY + ['impl', 'model', 'start', 'msg', 'nfev']) for x in glob.glob(os.path.join(O, 'p3', 'starts_*_c*.csv'))])
+st = st[st.impl == 'corrected'].rename(columns={'start': 'selected_start', 'msg': 'optimizer_message', 'nfev': 'optimizer_nfev'}).drop(columns='impl')
+st['param'] = st['param'].astype(float); c['param'] = c['param'].astype(float)
+c = c.merge(st, on=KEY + ['model', 'selected_start'], how='left', validate='m:1')
 c['full_coefficients'] = 'out/p3/coef_<city>_<cat>_c<chunk>.npz (corrected), out/p3_e2_fits.parquet'
 
 # ---- empirical 254 cells: M, NB2, MIX

@@ -11,6 +11,8 @@ Tag `p2-frozen` = corrected estimator + solver contract frozen before production
 - Environment: Python 3.14.9, numpy 2.5.4, scipy 1.18.1, pandas 3.1.0, `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1`, 32-core Linux host.
 - Corrected code (sha256 prefix): `mfit_corrected.py` adb926aa…, `altmodels_corrected.py` 3fe99613…, `tobit_corrected_shim.py` 7de38de1…, `p4_hourly_f.py` 3c583d27…, `solver_contract.json` db713789…, `numeric_validation.log` cccc9eb6….
 
+- Inventory at P0 (outside the audit ZIP): the 16 E2 shards store only two fitted coefficients (promo, depth) and the convergence flag per attempt. Full fitted vectors, full generating `beta_vec`, the X/K/C datasets and optimizer logs were **not** saved, so the E2 inputs were rebuilt with the isolated legacy code (`frozen/*.npz`, which now store X, the full `beta_vec`, K and C for every dataset). Empirical: `elast_cells.csv` stores the promo/depth coefficients, `m_converged`, `m_grad` and `m_nit`, but no full vectors. `pilot/fit_state.npz` stores the pilot inputs but not X. Every corrected fit now stores the full coefficient vector (`full_fits/`).
+
 ## 2. Defects found and exact changes
 
 | Legacy location | Defect | Correction (where) |
@@ -34,7 +36,7 @@ Average NLL; scipy L-BFGS-B, maxiter 5000, maxfun 50000, maxls 50, internal gtol
 
 ## 4. Numerical checks
 
-`numeric_validation.log` 26/26 PASS (instruction tests a–d, legacy-floor demonstration, FD gradients/Hessians, recovery on known truth, multistart agreement, NB2 large-θ log-pmf). `out/altmodels_selfcheck.log` ALL PASS (ZIP2/mixture FD gradients ≤ 3.3e-10, π=1 reductions exact, K=200 μ=1 = −869.530, recovery formulas vs brute force ≤ 1.8e-15). P4 allocation checks pass in all 254 cells (non-negative, additions only in flagged hours, uncensored days unchanged, daily totals ≤ 4.4e-16).
+`numeric_validation.log` 25/25 PASS (instruction tests a–d, legacy-floor demonstration, FD gradients/Hessians, recovery on known truth, multistart agreement, NB2 large-θ log-pmf). `out/altmodels_selfcheck.log` ALL PASS (ZIP2/mixture FD gradients ≤ 3.3e-10, π=1 reductions exact, K=200 μ=1 = −869.530, recovery formulas vs brute force ≤ 1.8e-15). P4 allocation checks pass in all 254 cells (non-negative, additions only in flagged hours, uncensored days unchanged, daily totals ≤ 4.4e-16).
 
 ## 5. Replay status
 
