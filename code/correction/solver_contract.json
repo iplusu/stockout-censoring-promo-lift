@@ -1,0 +1,17 @@
+{
+ "frozen_before_production": true,
+ "objective": "average negative log likelihood (sum / n)",
+ "solver": "scipy L-BFGS-B, maxiter 5000, maxfun 50000, maxls 50, internal gtol 1e-9, ftol 0",
+ "validity": "solver success AND finite objective/coefficients/gradient AND sup-norm projected average-scale gradient <= 1e-6 on the original scale AND on the column-standardized scale (g_j * sd(X_j))",
+ "status_categories": ["valid", "structural_nonexistence (recession LP J*>1e-8)", "unresolved_screen", "unidentified (rank(X)<p, recorded separately from optimization)", "nonconvergence", "nonfinite"],
+ "model_bounds": {"NB2 log-theta": "<= log(1e4) (legacy model definition)", "MIX logit-pi": "[-8, 8] (legacy model definition)", "boundary solutions flagged at_bound"},
+ "starts": {
+   "M":   ["b0 = legacy init_poisson_irls(X,K,C) (same start as legacy E2/empirical)", "b0 + 0.1 on promo", "b0 + 0.1 on depth"],
+   "NB2": ["E2: [b0, log 5] (legacy start)", "[b_M_corrected, log 5] if corrected M valid"],
+   "MIX": ["E2: [b0, logit 0.1] (legacy start)", "[b_M_corrected, logit 0.1] if corrected M valid"],
+   "empirical NB2/MIX": "legacy initializes at the legacy M optimum -> corrected initializes at the corrected M optimum, plus b0",
+   "selection": "lowest objective among valid starts; every start logged"
+ },
+ "no_exclusions": "no |coefficient| cutoff; every attempted dataset keeps a status row",
+ "validation": "numeric_validation.log 25/25 PASS (incl. NB2 large-theta stable log-pmf, added after P3 timing found the cancellation defect)"
+}

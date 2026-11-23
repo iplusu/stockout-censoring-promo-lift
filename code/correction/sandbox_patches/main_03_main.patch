@@ -1,0 +1,23 @@
+--- correction_20261122/legacy/main/03_main.py	2026-10-29 04:34:22.766228206 -0400
++++ correction_20261122/sandbox/main/03_main.py	2026-11-23 03:25:26.096592845 -0500
+@@ -29,7 +29,10 @@
+ 
+ def apportion(k_h, ST, C, K, Dhat):
+     """잠복 수요를 스톡아웃 시간에 hour-of-day 프로파일(uncensored일)로 분배."""
+-    P = k_h[~C].mean(axis=0)
++    # P5 correction (instructions sec. 4): explicit Boolean mask; no uncensored row -> hourly result unavailable (NaN)
++    if not (C == 0).any():
++        return np.full(k_h.shape, np.nan)
++    P = k_h[C == 0].mean(axis=0)
+     L = np.maximum(Dhat - K, 0.0)
+     den = (ST * P[None, :]).sum(axis=1)
+     out = k_h.astype(np.float64).copy()
+@@ -209,7 +212,7 @@
+         for k in rows:
+             rows[k] = np.concatenate(rows[k])
+         d = build_cell(rows)
+-        rec, hourly = fit_cell(d, run_F=(key in topF))
++        rec, hourly = fit_cell(d, run_F=False)  # P5: corrected F computed in p4_hourly_f.py (out/p4_F_summary.csv)
+         rec['city'], rec['cat'] = city, cat
+         if hourly is not None:
+             hourly_rows.append({**{f'naive_h{h}': round(float(v), 5) for h, v in enumerate(hourly['naive_h'])},

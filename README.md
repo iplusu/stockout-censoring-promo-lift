@@ -23,7 +23,53 @@ different dataset, FreshRetailNet-LT (1,057 stores / 576 SKUs / ~20,000
 series / 2+ year span) -- see Section 2.3 of the manuscript for why this
 paper uses the 50K/v1 panel instead. LT is not used by any script here.
 
-## Pipeline (run in order)
+## Corrected pipeline (source of every number in the current manuscript)
+
+A code audit found implementation defects in the original recovery-model code. All manuscript results now come from
+the corrected pipeline in `code/correction/`. The original scripts in `code/pilot` and `code/main` are kept unchanged
+as the historical record; their outputs in `data/main` are the pre-correction values.
+
+Defects corrected (details: `data/correction/repair_log.md`):
+1. The censored tail log Pr(D > K) was floored at 1e-300 and lambda was clipped. It is now a strict, stable log-domain
+   tail with no floor or clip (`mfit_corrected.py`).
+2. The convergence flag was solver success only. Validity now requires stationarity <= 1e-6 on both the original and
+   the standardized scale, a recession-LP screen for structural non-existence of the MLE, and an identification check.
+3. The censored-row curvature in the store-day fixed-effect (F) model had the wrong sign. F is now a joint Newton fit
+   with a joint convergence check.
+4. The hourly profile used `k_h[~C]` on an integer array, which selects rows -1/-2 instead of uncensored days. It now
+   uses `k_h[C == 0]`.
+5. The same tail floor in the NB2, ZIP and mixture alternatives is replaced (`altmodels_corrected.py`).
+
+Run order (`OMP_NUM_THREADS=1`; set `FRN_PARQUET` to the raw `train.parquet`):
+1. `python validate_corrected.py` writes `numeric_validation.log` (26/26 checks). `python altmodels_corrected.py`
+   runs the alternative-model self-check.
+2. `python replay_e2.py` then `python compare_replay.py`: freeze the E2 inputs with the unmodified legacy generator.
+   This is a documented reconstruction: keys and true coefficients are identical for all 35,100 datasets, and the
+   generated data are identical for 28,985 of them.
+3. `python p3_fit.py --all --workers 28` (E2, all 35,100 datasets) and `python p3_empirical.py --all` (254 cells).
+4. `python p4_hourly_f.py --all` (hourly mask fix for 254 cells, corrected F for the original 20 cells).
+5. `python p5_e2.py` reruns the original E2 analysis chain (seed 42, 4,000-draw city bootstrap, both Holm families)
+   on the corrected fits.
+6. `run_p5_stage1.sh` and `run_p5_stage2.sh` rerun the original empirical scripts in a sandbox copy whose
+   `pilot/tobit.py` is `tobit_corrected_shim.py`. The other edits to the sandbox copies are in
+   `code/correction/sandbox_patches/` (they exclude cells without a valid fit and state the denominator).
+7. `python p5_before_after.py`, `python p6_package.py` and `python p6c_manuscript_map.py` write `before_after.csv`,
+   `fit_diagnostics.csv` and `manuscript_changes.csv`.
+
+Paths: the scripts use the absolute workspace paths where they were run (`.../correction_20261122`, the raw-data path). Set `JAMS_CORR_DIR` to `code/correction` and `FRN_PARQUET` to the raw file. The sandbox is `code/main` and `code/pilot` with the patches in `code/correction/sandbox_patches/` applied and `pilot/tobit.py` replaced by `tobit_corrected_shim.py`.
+
+Outputs in `data/correction/`:
+- `before_after.csv`: old value, corrected value, absolute change, denominator and comparison basis for every
+  affected statistic.
+- `fit_diagnostics.csv.gz`: one row per attempted dataset and model, 106,082 rows. Failed fits are kept.
+- `manuscript_changes.csv`: every changed manuscript sentence, table and figure.
+- `sandbox_main/`: corrected versions of the `data/main` tables.
+- `p5_e2/`: E2 tables and tests.
+
+Controlled simulation (manuscript §3.4, Figure 5, Online Resource 1): `code/controlled_sim/` and
+`data/controlled_sim/` (see the README there; MIT licence).
+
+## Original pipeline (historical, pre-correction values)
 
 1. `code/pilot/01_select_cell.py`, `02_pilot.py` (uses `tobit.py`) -- pilot
    cell selection and model-fitting criteria, fixed before the main
@@ -79,18 +125,14 @@ paper uses the 50K/v1 panel instead. LT is not used by any script here.
 - The Study 1 (Yelp) directory and its activity-matching code (`run_pB`
   above): no part of the submitted paper's claims depends on it.
 
-## Known non-reproducibility (disclosed in the manuscript)
+## Reproducibility notes
 
-Per the manuscript's Appendix ("Reproducibility"): the E2 simulation's
-Naive/G columns reproduce exactly; the correction models (M, MIX, NB2) are
-not bit-reproducible run-to-run at the individual-fit level (max ~0.08
-absolute difference across all 60 `tab:e2descriptive` entries on a fresh
-re-run), because their iterative MLE fits are solver-sensitive. This does
-not affect the formally tested claim (M's error exceeding Naive/G for
-rho>0 in arm A4), which is robust across both realizations. The
-74.1%/89.3%/34.8%/40.8% fit-level error-rate statistics are a separate,
-not-yet-scripted computation on an `e2_err2.parquet` intermediate and are
-not reproduced by `11_e2_run_all.py` alone.
+- E2 inputs: the original shards could not be replayed bit for bit, because the generator calls the legacy M fit and
+  that fit is sensitive to floating-point behaviour. The corrected analysis therefore uses a frozen, hashed
+  reconstruction (`replay_manifest.json`). The original shards stay in `data/main` as the historical result.
+- The corrected fits are deterministic under the frozen solver contract (`solver_contract.json`).
+- Under arm A4 with rho > 0, the censored-Poisson MLE does not exist for most datasets. These fits are reported as
+  failures, not dropped (`fit_diagnostics.csv.gz`).
 
 ## Requirements
 

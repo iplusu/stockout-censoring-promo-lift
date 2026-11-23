@@ -1,0 +1,42 @@
+{
+ "protocol_version": "1.0 (2026-11-22)",
+ "source_commit": "acfa5e0c38e0d85eefcf0fb65ce3a890b1bc416f",
+ "files": {
+  "protocol.txt": "b3e172a7ca1619316eafa2f075c996dec6dc863bc19cf1368d5bc8022d75efd0",
+  "config.json": "a15aca90fb17e87caf0791fff15985fe70bb8998eeb97d63eeb87f477a4d1b31",
+  "calibration.csv": "a5e45142bb592e0f26f8665398f3f282395469bdb32dd8abeb3d513cc5158f46",
+  "calibrate.py": "1d73d1f2cb9372adac95189316a86145e8cc3db21cbdd377ea6b98cc30fec3a2",
+  "check_calibration_mc.py": "56859b51b9edf429782726ac817997677935a10ba26514cccddd0e0be499578e",
+  "sim.py": "1ae4e1a1dfa29f79056d0d807f68ba00f91cfda27e1552d6baaa6bc9cb11a7b0",
+  "run.py": "dad5d5dcac6d52d60c8ea3db4b6da7665ec7b89ceeab517269aba507986d1e17",
+  "analysis.py": "dcf9c33fc0fed763385aed47526f342aa688d04f1b1e17eb2de03874e541a668",
+  "validate.py": "dcf3bea160957297f276cfddaf29ee16488ebe8ea6404f09a8f9deebe85dcc22",
+  "validation_log.txt": "8790e1be21cf6bf3bfff00079533f350a9b9e426041d4918443c88d9f65e4db1",
+  "env_versions.txt": "65a82f45d7ac0a63b2f868bcb7cf565da10c98fbb76b67f6cfa36755b7190c3b"
+ },
+ "dependencies": {
+  "python": "3.14.9",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "pandas": "3.1.0"
+ },
+ "seed_mapping": {
+  "master": "SeedSequence(20261122)",
+  "spawn3": [
+   "evaluation",
+   "bootstrap",
+   "engineering"
+  ],
+  "evaluation": "evaluation.spawn(1000); replicate r uses child r-1; draw order Z_D[2400] then Z_C[2400]; Generator(PCG64)",
+  "bootstrap": "one Generator(PCG64(bootstrap child)); iteration b = row b of integers(0,1000,(2000,1000))",
+  "engineering": "engineering.spawn(6); child 0 = calibration MC check, children 1..5 = smoke IDs"
+ },
+ "conventions": {
+  "median": "numpy midpoint",
+  "quantiles": "numpy linear",
+  "mcse": "bootstrap SD ddof=1",
+  "hessian": "average NLL Hessian (normalized by n)"
+ },
+ "validation": "validation_log.txt: 30/30 PASS",
+ "deviations": []
+}

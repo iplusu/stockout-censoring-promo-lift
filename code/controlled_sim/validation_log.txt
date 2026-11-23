@@ -1,0 +1,34 @@
+PASS  9.1 hand (D,C)->(K,I)  
+PASS  9.1 nonneg integer support  
+PASS  9.1 censored => D strictly > K; uncensored => K = D  
+PASS  9.1 censored contribution uses logsf(K) (strict)  |diff|=0.00e+00
+PASS  9.2 all I=0: M objective == Poisson  
+PASS  9.2 all I=0: M gradient == Poisson  
+PASS  9.2 strict Poisson tail vs direct summation (small cases)  max abs log diff=1.78e-15
+PASS  9.3 gradient vs centered FD (near truth, h=1e-6)  scaled=1.79e-10
+PASS  9.3 Hessian vs gradient differences (near truth, h=1e-5)  scaled=1.33e-11
+PASS  9.3 gradient vs centered FD (far, h=1e-6)  scaled=1.02e-10
+PASS  9.3 Hessian vs gradient differences (far, h=1e-5)  scaled=1.52e-10
+PASS  9.3 far tail K=1000 mu=1 (Decimal 80 digits)  logsf=-5920.035934766144 ref=-5920.035934766144 abs=0.0e+00; score rel=3.5e-13; curvature rel=3.5e-13
+PASS  9.3 curvature across direct/series switch (k+1 vs 2mu, 7 points, Decimal ref)  max rel=5.01e-14
+PASS  9.3 tail switch overlap (gammainc vs series, S in 1e-290..1e-100)  max=2.27e-13
+PASS  9.4 all-censored -> nonexistent  ('nonexistent', 7.5)
+PASS  9.4 all-zero uncensored -> nonexistent  ('nonexistent', 7.5)
+PASS  9.4 positive uncensored spanning design -> pass  
+PASS  9.4 mixed example: LP certifies nonexistence and moving along v lowers objective monotonically  J*=0.4000 v=[-0.0, 0.3, -1.0] nll=[1.747862, 1.723553, 1.71146, 1.70446, 1.703486, 1.703484]
+PASS  9.6 median of within-ID differences (not difference of medians)  (1.0, 4)
+PASS  9.6 large finite loss retained (100 pp)  
+PASS  9.6 missing-fit eligibility: invalid G removes ID from V only  
+PASS  9.6 nested Theta = median(B6 - B0), not Delta6 - Delta0  
+PASS  9.6 Theta uses W = V0 ∩ V.6  
+PASS  9.6 bootstrap keeps multiplicities  [-2.0, 4.0]
+PASS  9.6 empty resample -> missing, B_usable counted, no replacement draw  
+PASS  9.6 no original valid pairs -> not estimable  
+PASS  9.6 failed fits stay in failure denominator (per attempted fit)  
+PASS  9.5 different streams across IDs  
+PASS  9.5 identical demand across the six conditions within an ID  
+PASS  9.5 identical results under different worker order/count (5 smoke IDs, 30 datasets)  
+INFO  smoke 5 IDs x 6 conditions on 5 workers: 3.4s wall
+INFO  total validation wall time 7.1s; precision: float64 + Decimal(80) reference; FD steps grad 1e-6, Hessian 1e-5
+
+RESULT: ALL PASS

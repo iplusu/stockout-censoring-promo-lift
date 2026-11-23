@@ -1,0 +1,33 @@
+{
+  "protocol": {"file": "protocol.txt", "version": "1.0 (2026-11-22)",
+               "sha256_source_pdf": "b4965533eebc18a4063b5ac1b4c7fcfcf33a4d4d8ceb7d47f7ae3cb91123047f"},
+  "conditions": {"eta": [0.0, 0.6], "q": [0.20, 0.60, 0.95]},
+  "n_replicates": 1000,
+  "n_datasets": 6000,
+  "n_obs": 2400,
+  "beta_true": {"b0": "log(20)", "bP": 0.20, "bd": 1.0},
+  "strata": [
+    {"name": "no_promo",       "P": 0, "d": 0.00, "n": 1200},
+    {"name": "shallow_promo",  "P": 1, "d": 0.05, "n": 400},
+    {"name": "moderate_promo", "P": 1, "d": 0.15, "n": 400},
+    {"name": "deep_promo",     "P": 1, "d": 0.30, "n": 400}
+  ],
+  "estimators": {"G": "observed-sales Poisson, inputs (X,K)",
+                 "M": "censored Poisson, inputs (X,K,I)",
+                 "O": "latent-demand oracle, inputs (X,D)"},
+  "design_X": "(1, P, d); no interactions, penalties, constraints, weights, standardization",
+  "primary_statistic": "Theta_0.60 (paired change in relative lift-error performance)",
+  "n_bootstrap": 2000,
+  "seeds": {"master": 20261122, "spawn_order": ["evaluation", "bootstrap", "engineering"],
+            "evaluation_children": 1000, "replicate_r_uses_child": "r-1",
+            "per_replicate_draw_order": ["Z_D[2400]", "Z_C[2400]"],
+            "rng": "numpy Generator(PCG64) via SeedSequence"},
+  "calibration": {"n_cells": 24, "target": "population Pr(D>C|s,eta,a)=q",
+                  "kmax_rule": "smallest kmax with Pr(C>kmax) < 1e-10",
+                  "quadrature": {"total_abs_err_max": 1e-8, "epsabs_per_term": "1e-10/(kmax+1)", "epsrel": 1e-10, "limit": 200},
+                  "root": {"method": "brentq", "bracket": [-2, 2], "expand_step": 1, "expand_max": 10,
+                           "xtol": 1e-10, "rtol": 1e-12, "maxiter": 200},
+                  "accept_abs_err": 1e-6,
+                  "eta0_check": "sum_k f_C(k) Pr(D>k)"},
+  "tail_logsf": "gammainc(K+1,mu)>1e-250 -> log; else logpmf(K+1)+log(1+sum mu^m/prod_{j=2}^{m+1}(K+j)); no probability floor"
+}

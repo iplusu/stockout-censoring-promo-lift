@@ -1,0 +1,66 @@
+--- correction_20261122/legacy/main/08_pending_final.py	2026-11-01 20:03:54.059830506 -0500
++++ correction_20261122/sandbox/main/08_pending_final.py	2026-11-23 03:37:15.842314066 -0500
+@@ -976,8 +976,63 @@
+         fh.write(first + '\n' + rest)
+ 
+ 
++# ======================= P5 correction override: corrected fit_cell (altmodels_corrected.py) =======================
++import altmodels_corrected as _alt  # noqa: E402
++
++
++def _x(o, k=None):
++    return np.asarray(o['x']) if o['valid'] else None
++
++
++def fit_cell(rows, bG_p, bG_d):
++    d = m05.m3.build_cell(rows)
++    X, K = d['X'], d['K'].astype(float)
++    C = d['C']; pm = d['promo'] == 1
++    Z = np.column_stack([np.ones(len(K)), pm.astype(float)])
++    rec = dict(n_rows=int(X.shape[0]), bG_p=float(bG_p), bG_d=float(bG_d))
++    b_irls = tobit.init_poisson_irls(X, K, C)
++    fM = tobit.fit(X, K, C, b0=b_irls); bM = fM['b']; okM = bool(fM['converged'])
++    rec.update(m_conv=okM, m_nit=fM['nit'], m_ll=fM['ll'], m_bp=bM[NPROMO], m_bd=bM[NDEPTH], m_status=fM['status'])
++    D_M, lam_M = tobit.latent_day(bM, X, K, C)
++    rec['recA_M'] = float(D_M[pm].mean() - D_M[~pm].mean())
++    uc = C == 0
++    rec['pearson_df'] = float(np.sum((K[uc] - lam_M[uc]) ** 2 / lam_M[uc]) / max(int(uc.sum()) - X.shape[1], 1)) if okM else float('nan')
++    fN = m07p3.fit_nb2(X, K, C, bM, theta0=5.0)
++    D_N = m07p3.recov_nb2(fN['b'], fN['theta'], X, K, C)
++    rec.update(n2_conv=fN['converged'], n2_nit=fN['nit'], n2_ll=fN['ll'], n2_th=fN['theta'], n2_bp=fN['b'][NPROMO], n2_bd=fN['b'][NDEPTH],
++               recA_n2=float(D_N[pm].mean() - D_N[~pm].mean()), n2_status=fN['status'])
++    fZ1 = m07p3.fit_zip(X, K, C, bM)
++    D_Z1 = m07p3.recov_zip(fZ1['b'], fZ1['pi'], X, K, C)
++    rec.update(z1_conv=fZ1['converged'], z1_nit=fZ1['nit'], z1_ll=fZ1['ll'], z1_pi=fZ1['pi'], z1_bp=fZ1['b'][NPROMO], z1_bd=fZ1['b'][NDEPTH],
++               recA_z1=float(D_Z1[pm].mean() - D_Z1[~pm].mean()), z1_status=fZ1['status'])
++    st = lambda base, aux: [np.append(b, aux) for b in ([base] if base is not None and np.all(np.isfinite(base)) else []) + [b_irls]]
++    o = _alt.fit_zip2(X, K, C, Z, st(bM, [0.0, 0.0])); x = _x(o); nan = float('nan')
++    rec.update(z2_conv=o['valid'], z2_nit=o['nit'], z2_ll=-o['obj'] * len(K) if o['valid'] else nan, z2_g0=x[-2] if x is not None else nan,
++               z2_g1=x[-1] if x is not None else nan, z2_bp=x[NPROMO] if x is not None else nan, z2_bd=x[NDEPTH] if x is not None else nan, z2_status=o['status'])
++    for tag, pif in (('m95', 0.95), ('m85', 0.85), ('m75', 0.75)):
++        o = _alt.fit_mix(X, K, C, 'pois', pif, st(bM, [])); x = _x(o)
++        rec.update(**{f'{tag}_conv': o['valid'], f'{tag}_ll': -o['obj'] * len(K) if o['valid'] else nan,
++                      f'{tag}_bp': x[NPROMO] if x is not None else nan, f'{tag}_bd': x[NDEPTH] if x is not None else nan, f'{tag}_status': o['status']})
++    o = _alt.fit_mix(X, K, C, 'pois', None, st(bM, [np.log(0.95 / 0.05)])); x = _x(o)
++    rec.update(mp_conv=o['valid'], mp_ll=-o['obj'] * len(K) if o['valid'] else nan, mp_pi=1 / (1 + np.exp(-x[-1])) if x is not None else nan,
++               mp_bp=x[NPROMO] if x is not None else nan, mp_bd=x[NDEPTH] if x is not None else nan, mp_status=o['status'])
++    bN = fN['b']; lthN = np.log(fN['theta']) if np.isfinite(fN['theta']) else np.log(5.0)
++    stN = lambda aux: [np.append(b, aux) for b in ([bN] if np.all(np.isfinite(bN)) else []) + [b_irls]]
++    for tag, pif in (('nm95', 0.95), ('nm85', 0.85), ('nm75', 0.75)):
++        o = _alt.fit_mix(X, K, C, 'nb', pif, stN([lthN])); x = _x(o)
++        rec.update(**{f'{tag}_conv': o['valid'], f'{tag}_ll': -o['obj'] * len(K) if o['valid'] else nan, f'{tag}_th': float(np.exp(x[-1])) if x is not None else nan,
++                      f'{tag}_bp': x[NPROMO] if x is not None else nan, f'{tag}_bd': x[NDEPTH] if x is not None else nan, f'{tag}_status': o['status']})
++    o = _alt.fit_mix(X, K, C, 'nb', None, stN([lthN, np.log(0.95 / 0.05)])); x = _x(o)
++    rec.update(nmp_conv=o['valid'], nmp_ll=-o['obj'] * len(K) if o['valid'] else nan, nmp_pi=1 / (1 + np.exp(-x[-1])) if x is not None else nan,
++               nmp_th=float(np.exp(x[-2])) if x is not None else nan, nmp_bp=x[NPROMO] if x is not None else nan,
++               nmp_bd=x[NDEPTH] if x is not None else nan, nmp_status=o['status'])
++    return rec
++# ==================================================================================================================
++
+ def main():
+     selftest = '--selftest' in sys.argv
++    if '--pA-only' in sys.argv:  # P5: only run_pA is this paper's reproduction path (README item 7)
++        run_pA(nproc=int(sys.argv[sys.argv.index('--nproc') + 1]) if '--nproc' in sys.argv else 1); return
+     nproc = int(sys.argv[sys.argv.index('--nproc') + 1]) if '--nproc' in sys.argv else 1
+     if selftest:
+         print('=== SELFTEST (P-A 10 cells / P-B 20 businesses / P-C 10 cities) ===', flush=True)

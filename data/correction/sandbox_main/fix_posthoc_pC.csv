@@ -1,0 +1,11 @@
+stat,point,wild_lo,wild_hi,block_lo,block_hi,width_ratio
+P1a_median_abs_bias_ratio,0.4547,0.3886,0.5208,0.4118,0.5084,1.37
+P1a_frac_ge20,0.7992,0.7539,0.8419,0.7572,0.8467,0.98
+P1b_depth_median_abs_bias_pct,0.5004,0.4302,0.5706,0.4278,0.5918,0.86
+P1b_depth_frac_ge20,0.7631,0.7059,0.8196,0.7051,0.8143,1.04
+P1b_promo_median_abs_bias_pct,0.8337,0.6699,0.9975,0.7057,1.1184,0.79
+P1b_promo_frac_ge20,0.8273,0.7902,0.8659,0.7895,0.8683,0.96
+pure_censoring_depth_median,0.2594,0.2299,0.2917,0.234,0.3044,0.88
+pure_censoring_depth_frac_ge20,0.6024,0.5598,0.6436,0.5607,0.6496,0.94
+pure_censoring_promo_median,0.5245,0.4026,0.6538,0.4231,0.6377,1.17
+pure_censoring_promo_frac_ge20,0.7711,0.7263,0.8156,0.7205,0.816,0.94

@@ -1,0 +1,37 @@
+--- correction_20261122/legacy/main/10_fix_posthoc.py	2026-11-01 20:05:39.524744748 -0500
++++ correction_20261122/sandbox/main/10_fix_posthoc.py	2026-11-23 07:22:04.448543351 -0500
+@@ -20,6 +20,8 @@
+     """Corrected Rademacher wild-cluster CI (identical construction to 08, fixed weights)."""
+     vals = np.asarray(vals, float)
+     cities = np.asarray(cities)
++    fin = np.isfinite(vals)  # P5: cells without a valid fit (NaN) are excluded, with their city weights
++    vals, cities = vals[fin], cities[fin]
+     N = len(vals)
+     rng = np.random.RandomState(seed)
+     W = 2 * rng.choice(2, size=(n_boot, len(np.unique(cities)))) - 1
+@@ -45,11 +47,11 @@
+ a = pd.read_csv(os.path.join(HERE, 'pending_final_pA_cells.csv'))
+ assert len(a) == 254
+ cits = a['city'].astype(str).values
+-# sign fix: n2_ll and z1_ll were stored as -ll
+-for c in ('n2_ll', 'z1_ll'):
+-    assert (a[c] > 0).all() or (a[c] < 0).all(), f'{c} mixed signs'
+-    a[c] = -a[c]
+-    print(f'{c}: sign flipped; now min={a[c].min():.1f} max={a[c].max():.1f}')
++# P5: corrected fits store ll with the correct sign (log-likelihood incl. lgamma(K+1)); the legacy sign flip for
++# n2_ll/z1_ll (stored as -ll by the old 07_pending_3) must NOT be applied. Non-valid fits are NaN.
++for c in [x for x in a.columns if x.endswith('_ll')]:
++    v = a[c].astype(float)
++    assert (v.dropna() < 0).all(), f'{c}: expected negative log-likelihoods'
+ 
+ ALT_KEYS = [('n2', 'NB2'), ('z1', 'ZIP_Z=1'), ('z2', 'ZIP_Z=[1,promo]'),
+             ('m95', 'mix_pi.95'), ('m85', 'mix_pi.85'), ('m75', 'mix_pi.75'),
+@@ -75,7 +77,7 @@
+         c_ok = cits[ok.values]
+         med_all, lo_all, hi_all = wild_ci(gap_all, cits, kind='median')
+         med_ok, lo_ok, hi_ok = (np.median(gap_ok), np.nan, np.nan) if n_conv < 5 else wild_ci(gap_ok, c_ok, kind='median')
+-        frac_all = float((gap_all >= 0.20).mean())
++        frac_all = float((gap_all[np.isfinite(gap_all)] >= 0.20).mean())
+         rows.append(dict(alt=name, coef=coef, n_conv=n_conv,
+                          med_all_cells=round(float(med_all), 4), frac_all=round(frac_all, 4),
+                          wild_all_lo=round(lo_all, 4), wild_all_hi=round(hi_all, 4),

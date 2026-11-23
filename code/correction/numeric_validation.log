@@ -1,0 +1,27 @@
+PASS  (a) I=0: M objective == Poisson  
+PASS  (a) I=0: M gradient == Poisson  
+PASS  (b) Poisson strict log-SF vs Decimal (k up to 1000, mu=1)  max abs=1.14e-13
+PASS  (b) NB2 strict log-SF vs Decimal (incl. far tail, theta 0.5..1e4)  max abs=1.78e-15
+PASS  (b) NB2 log-pmf: stable form == scipy at theta=2.5, -> Poisson at theta=1e14 (theory gap ~(k^2+mu^2)/theta ~ 4e-11)  vs scipy 3.7e-14; vs Poisson 1.3e-11
+PASS  (b) legacy 1e-300 floor differs from strict tail (documented defect)  legacy=-690.776 strict=-869.530
+PASS  (c) M gradient vs centered FD (near truth)  2.0e-10
+PASS  (c) M Hessian vs gradient differences (near truth)  5.1e-11
+PASS  (c) M gradient vs centered FD (far)  8.8e-10
+PASS  (c) M Hessian vs gradient differences (far)  5.7e-10
+PASS  (c) censored curvature K=0, lambda=1 = -0.3386968873 (legacy F gave +0.3387)  corrected=-0.3386968873 ref=-0.3386968873
+PASS  (c) far-tail curvature K=1000, mu=1 vs Decimal  rel=3.5e-13
+PASS  (c) NB2 gradient vs centered FD (beta analytic, log-theta FD)  1.8e-10
+PASS  (c) MIX gradient vs centered FD  2.6e-10
+PASS  (d) all censored -> structural_nonexistence  
+PASS  (d) all-zero uncensored -> structural_nonexistence  
+PASS  (d) rank-deficient design -> unidentified (separate from recession)  
+PASS  (d) ordinary censored data -> pass  
+PASS  (d) promo rows all zero & uncensored -> nonexistent, fit not attempted  J*=1495.000
+PASS  recovery M (censored Poisson DGP)  max|b-b*|=0.026 g_orig=5.3e-11 g_std=5.3e-11 info=ok
+PASS  recovery NB2 (censored NB DGP, theta=2): valid and all |z| < 3.5 (SE from FD Hessian)  z=[-0.52, 0.68, 1.31, -1.7, 1.05, -0.16, -0.92] theta=1.91 g_orig=1.6e-08
+PASS  recovery MIX (censored ZIP DGP, pi=0.15): valid and all |z| < 3.5  z=[-1.62, 0.91, 2.31, 0.86, 0.93, -0.11, 2.32] pi=0.165 g_orig=5.7e-11
+PASS  legacy agreement NB2 on non-extreme data (no offset): |b_corr - b_legacy| < 1e-5  3.5e-08
+PASS  legacy agreement MIX on non-extreme data (no offset): |b_corr - b_legacy| < 1e-5  3.7e-07
+PASS  multi-start: all converged starts reach the same objective  spread=0.0e+00
+
+RESULT: ALL PASS

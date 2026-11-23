@@ -1,0 +1,14 @@
+--- correction_20261122/legacy/main/09_dose_wildci.py	2026-11-01 04:09:17.336802336 -0500
++++ correction_20261122/sandbox/main/09_dose_wildci.py	2026-11-23 07:22:50.399332820 -0500
+@@ -67,6 +67,11 @@
+     b0 = tobit.init_poisson_irls(d['X'], d['K'], d['C'])
+     fM = tobit.fit(d['X'], d['K'], d['C'], b0=b0)
+     Dhat, _ = tobit.latent_day(fM['b'], d['X'], d['K'], d['C'])
++    if not fM['converged']:  # P5: no valid corrected M -> cell excluded from the pool, counted
++        n_invalid = globals().get('n_invalid', 0) + 1; globals()['n_invalid'] = n_invalid
++        print(f'excluded (no valid M): {city},{cat} status={fM.get("status")}', flush=True)
++        del groups[key]
++        continue
+     depth = np.where(pm, 1.0 - rows['disc'], 0.0)
+     D_list.append(Dhat[pm])
+     K_list.append(d['K'][pm])

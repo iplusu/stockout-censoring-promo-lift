@@ -1,0 +1,15 @@
+<frozen site>:101: RuntimeWarning: Unexpected value in sys.prefix, expected /home/ubuntu/papers/jams-frn50k/.venv, got /home/ubuntu/papers/jams-frn50k/correction_20261122/../.venv
+<frozen site>:101: RuntimeWarning: Unexpected value in sys.exec_prefix, expected /home/ubuntu/papers/jams-frn50k/.venv, got /home/ubuntu/papers/jams-frn50k/correction_20261122/../.venv
+zip2 grad FD: 3.284e-10
+zip2(Z=1) == zip: 0.000e+00
+mix pois pi=0.85 grad FD: 2.632e-11
+mix pois pi=None grad FD: 2.895e-11
+mix nb pi=0.85 grad FD: 1.110e-10
+mix nb pi=None grad FD: 1.110e-10
+mix pois pi=1 == M: 0.000e+00
+mix nb pi=1 == NB2: 0.000e+00
+no floor K=200 mu=1 (exact -869.530): -869.5303
+recov_nb2 vs brute: 1.776e-15
+recov_pois vs brute: 8.882e-16
+recov_nb2 K=0: 4.441e-16
+ALL PASS

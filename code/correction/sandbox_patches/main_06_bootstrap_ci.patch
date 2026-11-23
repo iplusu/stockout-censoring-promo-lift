@@ -1,0 +1,47 @@
+--- correction_20261122/legacy/main/06_bootstrap_ci.py	2026-10-30 05:52:20.825138590 -0400
++++ correction_20261122/sandbox/main/06_bootstrap_ci.py	2026-11-23 04:36:38.278903066 -0500
+@@ -17,6 +17,7 @@
+ """
+ import csv
+ import random
++import math
+ import sys
+ 
+ 
+@@ -29,13 +30,22 @@
+     return 1 if x > 0 else (-1 if x < 0 else 0)
+ 
+ 
++def _f(v):
++    # P5: cells whose corrected fit is not valid carry blank/NaN coefficients -> excluded (eligible denominator)
++    try:
++        x = float(v)
++    except (TypeError, ValueError):
++        return None
++    return x if math.isfinite(x) else None
++
++
+ def frac_ge(rows, col, thresh=0.20):
+-    vals = [abs(float(r[col])) for r in rows]
++    vals = [abs(v) for v in (_f(r[col]) for r in rows) if v is not None]
+     return sum(1 for v in vals if v >= thresh) / len(vals) if vals else float("nan")
+ 
+ 
+ def median_abs(rows, col):
+-    vals = sorted(abs(float(r[col])) for r in rows)
++    vals = sorted(abs(v) for v in (_f(r[col]) for r in rows) if v is not None)
+     n = len(vals)
+     if n == 0:
+         return float("nan")
+@@ -44,8 +54,9 @@
+ 
+ 
+ def sign_flip_frac(rows, col_a, col_b):
+-    flips = sum(1 for r in rows if sgn(float(r[col_a])) != sgn(float(r[col_b])))
+-    return flips / len(rows) if rows else float("nan")
++    ok = [(_f(r[col_a]), _f(r[col_b])) for r in rows]
++    ok = [(a, b) for a, b in ok if a is not None and b is not None]
++    return sum(1 for a, b in ok if sgn(a) != sgn(b)) / len(ok) if ok else float("nan")
+ 
+ 
+ def bootstrap_ci(stat_fn, by_city, cities, n_boot=5000, seed=42):

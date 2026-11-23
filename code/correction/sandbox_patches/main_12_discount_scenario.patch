@@ -1,0 +1,13 @@
+--- correction_20261122/legacy/main/12_discount_scenario.py	2026-11-22 12:45:52.058046438 -0500
++++ correction_20261122/sandbox/main/12_discount_scenario.py	2026-11-23 04:44:00.650895288 -0500
+@@ -33,6 +33,10 @@
+ 
+ dc = pd.read_csv(f'{OUT}/decomp_cells.csv').merge(cellmax, on=['city', 'cat'], how='left')
+ assert dc['max_obs_depth'].notna().all()
++# P5: cells without a valid corrected M fit are excluded (eligible denominator printed)
++_ok = dc[['beta_rec_promo', 'beta_rec_depth', 'beta_glm_promo', 'beta_glm_depth']].notna().all(axis=1)
++print(f'eligible cells: {int(_ok.sum())}/{len(dc)} (excluded: {dc.loc[~_ok, ["city", "cat"]].values.tolist()})')
++dc = dc[_ok].reset_index(drop=True)
+ 
+ # 2) point summaries per depth
+ rows = []

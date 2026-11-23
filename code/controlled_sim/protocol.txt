@@ -1,0 +1,520 @@
+JAMS controlled simulation protocol                                            Version 1.0 | November 22, 2026
+
+
+
+Controlled Simulation Execution Protocol
+Stockout correction and promotion lift
+For the implementing coauthor. Please implement, validate, and run the fixed experiment below.
+Return the complete results package, including unsuccessful fits. The purpose is to replace the pending
+results in the current JAMS draft, not to obtain a particular estimator ranking.
+
+
+1      Purpose, inputs, and fixed scope
+
+This is a fully synthetic simulation. FreshRetailNet data are not an input. No new external
+data need to be collected. The existing empirical study and completed simulations remain separate
+evidence. Here we generate demand with known coefficients so that estimation error can be measured
+directly; true demand during real stockouts is unobserved.
+The experiment addresses RQ2: how does the relative accuracy of censored Poisson change when demand–
+capacity dependence changes at controlled expected censoring rates? It also evaluates the combined lift
+implied by promotion and discount-depth coefficients. Equal censoring rates do not guarantee equal
+information or equal identification strength.
+
+Item                                  Fixed specification
+Conditions                            η ∈ {0, 0.6} crossed with q ∈ {0.20, 0.60, 0.95}
+Evaluation budget                     1,000 independent replicate IDs, each evaluated in all six conditions:
+                                      6,000 datasets
+Observations per dataset              2,400; four fixed promotion–depth strata below
+Generating coefficients               (β0⋆ , βP⋆ , βd⋆ ) = (log 20, 0.20, 1.0)
+Estimators                            Observed-sales Poisson G; censored Poisson M ; latent-demand oracle
+                                      O
+Primary statistic                     Paired change in relative lift-error performance, Θ0.60
+Monte Carlo inference                 2,000 joint bootstrap resamples of replicate IDs
+Master seed                           20261122; separated streams for evaluation, bootstrap, and
+                                      engineering checks
+
+
+                    Stratum                    Promotion P        Depth d   Observations
+                    No promotion                              0         0          1,200
+                    Shallow promotion                         1      0.05            400
+                    Moderate promotion                        1      0.15            400
+                    Deep promotion                            1      0.30            400
+
+
+Status. This is a pre-execution implementation specification, not a claim of public preregistration. It
+retains the manuscript’s design and adds operational details for reproducibility, including finite-maximum
+checks. Record this version and the code commit before the production run. Synchronize Appendix F
+with these implementation details when reporting the results.
+
+
+
+
+                                                    1 of 10
+JAMS controlled simulation protocol                                                  Version 1.0 | November 22, 2026
+
+
+2    Generate demand and calibrate capacity
+
+For stratum s, set xs = (1, Ps , ds ) and
+
+                                     λs = exp(xs β ⋆ ) = 20 exp(0.20Ps + ds ).
+
+For each observation draw independent standard normals ZD , ZC . Define
+                                                                                    q                 
+                  UD = Φ(ZD ),                                  UC = Φ ηZD +             1 − η2Z   C       ,
+
+                    D = QPois (UD ; λs ),                       C = QPois (UC ; κsηq ).
+
+QPois is the smallest nonnegative integer whose Poisson CDF is at least its argument. The parameter η
+is a latent-normal correlation, not the Pearson correlation of the generated counts. Demand remains
+marginally Poisson in every condition.
+Calibrate 24 capacity means before evaluation. For each of four strata and six conditions, solve
+for asηq with κsηq = λs exp(asηq ) so that
+
+                                         p(a) = Pr(D > C | s, η, a) = q.
+
+Use the population probability, not the realized censoring share in a finite sample. If Hη is the Gaussian
+copula CDF, the exact probability is
+                             ∞
+                    p(a) =         [fC (k) − Hη {FD (k), FC (k)} + Hη {FD (k), FC (k − 1)}] ,
+                             X
+
+                             k=0
+
+where FC (−1) = 0. To avoid randomness in numerical bivariate-normal CDF routines, the equivalent
+deterministic conditional-normal integral is recommended:
+                                             ∞ Z bk
+                                                                           !
+                                                            ck − ηz
+                                     p(a) =          ϕ(z) Φ p
+                                             X
+                                                                               dz,
+                                            k=0 bk−1          1 − η2
+
+with bk = Φ−1 {FC (k)}, b−1 = −∞, ck = Φ−1 {FD (k)}, and Φ = 1 − Φ. Use stable normal survival and
+inverse-survival routines near probability boundaries; handle infinite limits analytically or through the
+quadrature routine.
+
+1. Truncate at the smallest kmax for which Pr(C > kmax ) < 10−10 . The omitted probability is bounded
+   by that tail.
+
+2. Use deterministic adaptive quadrature, with total estimated absolute integration error at most 10−8 .
+   A concrete setting is absolute tolerance 10−10 /(kmax + 1) per term, relative tolerance 10−10 , and 200
+   subintervals per integral. Retain warnings and error estimates.
+
+3. Start the log-multiplier bracket at [−2, 2]; if needed, expand each end by one, at most ten times. Use
+   Brent’s method with absolute root tolerance 10−10 , relative tolerance 10−12 , and 200 iterations.
+
+4. Verify |p(a) − q| ≤ 10−6 for every cell. Save all roots, means, achieved population probabilities,
+   numerical error estimates, and statuses. Freeze this calibration file before fitting any evaluation data.
+
+If calibration fails, stop for numerical diagnosis. Do not substitute empirical quantiles, retune to evaluation
+samples, or silently change a target. Under η = 0, verify the calculation against k fC (k) Pr(D > k).
+                                                                                       P
+
+
+
+
+                                                      2 of 10
+JAMS controlled simulation protocol                                                  Version 1.0 | November 22, 2026
+
+
+3    Random streams and observed data
+
+Use double precision and record exact language, package, operating-system, and random-generator ver-
+sions. The reference convention is NumPy Generator(PCG64(...)) initialized through SeedSequence;
+another implementation must document an equivalent, reproducible stream scheme before production.
+Create SeedSequence(20261122) and spawn three child sequences in this fixed order: evaluation,
+bootstrap, engineering checks. From the evaluation child, spawn exactly 1,000 children and assign
+child r − 1 to replicate ID r. Worker scheduling must not determine seeds. For each replicate, draw a
+length-2,400 ZD array and then a length-2,400 ZC array. Retain the fixed stratum order in Section 1.
+Reuse both normal arrays across all six conditions. Compute demand once per replicate; it
+must be identical across its six conditions. Capacity changes through η and the calibrated mean. Each
+condition contains
+                                   K = min(D, C),      I = 1{D > C}.
+Equality D = C is uncensored. For a censored observation, K = C and demand is strictly greater than
+K. For an uncensored observation, K = D.
+If floating-point normal CDF evaluation returns exactly 0 or 1, replace only that endpoint by the closest
+representable number inside (0, 1) before applying the Poisson quantile. Count such adjustments. This
+is a numerical boundary safeguard, not trimming of generated observations.
+Estimator information sets. Give G only (X, K); give M only (X, K, I); give O (X, D). True capacity,
+demand, η, and q must not enter G or M as extra regressors, starting-value truths, or selection rules.
+Use X = (1, P, d) without interactions, penalties, coefficient constraints, weights, or standardization.
+The truth is used to generate data, evaluate error, and fit the explicitly labeled oracle.
+Record every generated dataset. Save its replicate ID, condition, realized censoring share overall
+and by stratum, uncensored counts by stratum, and rank of the uncensored design matrix. Never reject,
+resample, or modify a dataset to force exactly q censoring or a minimum uncensored count. Variation
+around the calibrated rate is expected.
+
+
+4    Define the three estimation objectives
+
+For ti = xi β and µi = exp(ti ), maximize the ordinary Poisson log likelihood for G on K and for O on D.
+Fit the oracle only once per replicate: there are 1,000 oracle fits, not 6,000 independent oracle datasets.
+For M , maximize the working likelihood
+
+         ℓM (β) =       [(1 − Ii ) log fPois (Ki ; µi ) + Ii log S(Ki ; µi )] ,   S(k; µ) = Pr (Y > k).
+                    X
+                                                                                           Pois(µ)
+                    i
+
+The strict survival convention is essential: use logsf(K), not logsf(K-1). At η = 0, capacity is
+independent of demand given the stratum. At η = 0.6, the working likelihood ignores their dependence
+by design. Do not fit a dependence-corrected likelihood or give M the generating copula.
+
+
+
+
+                                                          3 of 10
+JAMS controlled simulation protocol                                                    Version 1.0 | November 22, 2026
+
+
+5    Numerical fitting and finite-maximum checks
+
+Minimize the average negative log likelihood. Use analytic gradients. For M , let
+
+                                µi fPois (Ki ; µi )
+                         hi =                       ,       si = (1 − Ii )(Ki − µi ) + Ii hi .
+                                   S(Ki ; µi )
+
+Then the gradient is −X T s/n. For G and O, use the same expression with all censoring indicators zero
+and the corresponding outcome. Compute hi on a log scale. Use logpmf/logsf or validated stable
+equivalents, not subtraction of a CDF from one. If a library tail calculation underflows in a relevant
+region, implement and validate a stable tail calculation before production; do not floor probabilities to
+an arbitrary constant.
+
+Numerical control                   Fixed value
+Optimizer                           L-BFGS-B with no bounds and analytic gradient
+Per-start limits                    2,000 iterations; 20,000 objective evaluations; 50 line-search steps;
+                                    memory 10
+Stopping controls                   Gradient infinity norm ≤ 10−6 on the average objective; ftol=0;
+                                    independently recompute the final gradient
+Start for G and O                   (log max{y, 10−8 }, 0, 0); one start per model
+Three starts for M                  b, b + (0, 0.1, 0), b + (0, 0, 0.1); b is the valid G estimate, otherwise
+                                    (log max{K, 10−8 }, 0, 0)
+Selection among M starts            Highest likelihood among valid converged candidates; ties within
+                                    10−12 in average objective use the earlier start
+Do not clip coefficients, cap predictions, add a ridge penalty, or restart until a preferred answer appears.
+A nonfinite trial evaluation is a numerical issue for the optimizer, not permission to alter the likelihood.
+Retain every start’s status, iterations, objective, and gradient norm.
+Screen for a maximum at diverging coefficients. An all-censored dataset has no finite maximum
+for M . Small gradients can also arise in less obvious boundary cases. Before optimization, define U+ as
+uncensored observations with positive outcome, U0 as uncensored zeros, and C1 as censored observations.
+Search for a direction v using the bounded linear program
+
+             max J(v) =                                   XU+ v = 0, XU0 v ≤ 0, XC1 v ≥ 0, |vj | ≤ 1.
+                           X               X
+                                  xi v −          xi v,
+               v
+                           i∈C1            i∈U0
+
+Before solving, reduce each set to its distinct design rows and give every distinct row unit weight in
+the displayed objective. Do not use observation-count weights with these numerical thresholds. If
+XU+ has rank 3, the screen passes without an LP. Otherwise require a successful optimal solve and
+maximum constraint/bound residual at most 10−9 . With these checks satisfied, J ∗ > 10−8 certifies no
+finite maximizer; −10−8 ≤ J ∗ ≤ 10−8 passes the screen. Every other outcome is unresolved. For G and
+O, all observations are uncensored. Structural nonexistence is distinct from optimizer failure. The full
+fixed design has rank 3; a rank-deficient full design is an implementation error here.
+
+
+
+
+                                                           4 of 10
+JAMS controlled simulation protocol                                            Version 1.0 | November 22, 2026
+
+
+6    Validity, failures, and information diagnostics
+
+A fit is numerically valid for accuracy summaries only when all of the following hold:
+1. The finite-maximum screen passes without an unresolved numerical status.
+
+2. At least one permitted optimization attempt reports convergence, with finite coefficients and objective
+   and independently verified gradient infinity norm at most 10−6 .
+
+3. Predicted lift at all three specified depths, the averaged lift loss, and both coefficient losses are finite.
+These rules do not establish well-conditioned or strongly identified estimation. Keep information
+diagnostics separate from accuracy eligibility. Do not exclude a large but finite loss, a coefficient sign
+reversal, or a high condition number merely because it looks implausible.
+Store separate Boolean flags for structural nonexistence, unresolved structural screen, optimizer non-
+convergence, nonfinite objective/coefficient, and nonfinite lift/loss. Also assign one mutually exclusive
+final status, in that priority order, ending with valid. When reporting a total failure count, count each
+attempted model fit once. Starts are not independent replicate attempts.
+Joint subsets. For each condition, define Vηq as replicate IDs where both M and G are valid. Use this
+same set for all three paired contrasts in Table 6. For the dependence contrast at q, use Wq = V0q ∩ V0.6,q .
+Oracle validity is recorded separately and never determines eligibility for an M − G comparison. Failed
+fits receive missing losses, not zeros, capped losses, oracle replacements, or newly generated datasets.
+Observed information. At a finite converged M candidate, the Hessian of the average negative log
+likelihood is
+                       1
+                  H = X T diag(wi )X,        wi = (1 − Ii )µi + Ii hi (µi + hi − Ki − 1).
+                       n
+Check this expression against numerical derivatives during engineering validation. Record its smallest
+and largest eigenvalues and condition number, and state that the Hessian is normalized by n. Use the
+average Hessian consistently across conditions.
+Set τ = 10−10 max(1, |λmax (H)|). If λmin > τ , report λmax /λmin . If −τ ≤ λmin ≤ τ , label the diagnostic
+singular/nearly singular and retain an infinite condition number. If λmin < −τ , label it indefinite; if
+computation is nonfinite, label it missing. These are diagnostic flags, not extra post hoc exclusions.
+Investigate systematic derivative failures as possible implementation defects.
+For the uncensored design rank, use SVD with tolerance max(nU , 3)ϵσmax ; the empty matrix has rank
+0. For each replicate retain the minimum uncensored count among the four strata. Report medians
+and 10th/90th percentiles across attempts, with counts of all-censored and rank-deficient uncensored
+designs. Include infinite condition numbers in ordered summaries and separately count missing/indefinite
+diagnostics; state every diagnostic denominator.
+
+
+
+
+                                                   5 of 10
+JAMS controlled simulation protocol                                               Version 1.0 | November 22, 2026
+
+
+7    Losses, paired contrasts, and interpretation
+
+For d ∈ D = {0.05, 0.15, 0.30}, calculate
+                b m,r,ηq (d) = expm1(βbP,m,r,ηq + dβbd,m,r,ηq ),
+                L                                                     L⋆ (d) = expm1(0.20 + d).
+
+The intercept cancels in lift relative to the same model’s nonpromotion baseline. Depth is a fraction,
+not 5, 15, or 30. Lift is initially proportional; multiply the absolute error by 100 to express percentage
+points (pp).
+                                              100 X b
+                                    Am,r,ηq =         |Lm,r,ηq (d) − L⋆ (d)|.
+                                               3 d∈D
+The coefficient losses are fractions, not percentages:
+
+                                        |βbP,m − 0.20|
+                              EP,m =                   ,       Ed,m = |βbd,m − 1.0|.
+                                             0.20
+For each condition, form the within-replicate differences first:
+
+                         Br,ηq = AM,r,ηq − AG,r,ηq ,        ∆ηq = medianr∈Vηq Br,ηq .
+
+Also compute median paired M − G differences in each coefficient loss on Vηq . Positive values mean
+greater error for M . Do not subtract separate model medians.
+One primary statistic. At q = 0.60,
+
+                                Θ0.60 = medianr∈W0.60 [Br,0.6,0.60 − Br,0,0.60 ] .
+
+Compute the same quantity at q = 0.20 and 0.95 as secondary summaries. Do not calculate Θq as
+∆0.6,q − ∆0,q : the pairing, subsets, and order of the median operation differ.
+Interpretation. A positive Θ0.60 means that introducing dependence makes the error difference less
+favorable to M under this design. It does not, by itself, show that M is worse than G in either condition;
+inspect the corresponding ∆ values. An interval spanning zero is inconclusive about this contrast, not
+proof of equivalence. A negative result is also reportable. No direction is a completion criterion.
+Prespecified descriptive outputs. Retain depth-specific paired lift-error differences, separate model-
+loss distributions, and the oracle’s coefficient and lift errors. To describe coefficient/lift agreement, report
+the fractions of Vηq in four categories: M improves both coefficient losses and lift loss; improves both
+coefficients but not lift; improves lift but not both coefficients; improves neither criterion. “Improves”
+means a strictly negative paired difference; zero is not improvement. Report these as descriptive
+counts/fractions, with their denominator, not additional confirmatory tests.
+
+
+
+
+                                                     6 of 10
+JAMS controlled simulation protocol                                           Version 1.0 | November 22, 2026
+
+
+8    Monte Carlo uncertainty and required tables
+
+Use the bootstrap child stream to draw 2,000 length-1,000 vectors of replicate IDs with replacement. Use
+the same resampled ID vector for every condition, estimator, and statistic in a bootstrap
+iteration. Carry each sampled ID’s validity flags with it, and retain repeated IDs with their multiplicities.
+This preserves the common-random-number pairing across conditions.
+Within each resample, reconstruct Vηq and Wq and recompute the statistics as defined in Section 7. Do
+not bootstrap rows within a simulated dataset, sample models independently, or resample empirical
+cities. For each statistic, report the original point estimate, the 2.5th and 97.5th percentiles of its
+bootstrap estimates, and their sample standard deviation (denominator Busable − 1) as its Monte Carlo
+standard error. Use the ordinary midpoint median for even sample sizes and linear-interpolated quantiles
+consistently; record the convention in the software manifest.
+If a bootstrap resample contains no eligible pairs, record that statistic as missing for that iteration.
+Report Busable out of 2,000 for every statistic. Never draw extra resamples to replace an empty one. If
+fewer than two estimates are usable, its interval and standard error are unavailable. If some estimates
+are missing, clearly identify the resulting interval as based on the estimable resamples; do not silently
+describe it as a complete 2,000-resample interval. A statistic with no original valid pairs is not estimable.
+The intervals quantify Monte Carlo uncertainty under this fixed generating design. Secondary intervals
+are pointwise; no multiplicity-adjusted confirmatory family or unrequested      significance tests are added.
+For a failure fraction pb over 1,000 attempted replicate fits, report pb(1 − pb)/1000 as its binomial Monte
+                                                                     p
+
+Carlo standard error. Do not treat optimizer starts as the denominator.
+Table 6: six rows in fixed order. Use (η, q) = (0, .20), (.6, .20), (0, .60), (.6, .60), (0, .95), (.6, .95).
+Report median paired lift-error difference in pp with interval; paired depth relative-error difference with
+interval; paired promotion relative-error difference with interval; and |Vηq |. Supply unrounded values in
+the data file. Table display may round losses to three decimals and pp to two decimals; do not round
+before summarizing.
+Separate dependence table: three rows. Report q, Θq , lower/upper interval limits, Monte Carlo
+standard error, |Wq |, and usable bootstrap count. Mark q = .60 as primary. Supply all three rows even
+when a contrast is inconclusive or not estimable.
+Table A8: six rows. Report mean realized censoring across all attempts, invalid-fit counts for G and
+M , median minimum uncensored stratum count, and median information condition number among
+eligible finite M candidates. Supplement with all component failure counts, stratum-specific censoring,
+eigenvalue summaries, diagnostic status counts/denominators, and failure-rate Monte Carlo standard
+errors. Numerical failure and poor information are related diagnostics, not interchangeable explanations.
+Oracle table: one summary across 1,000 attempts. Report valid count and median/10th/90th
+percentiles for each coefficient loss and lift loss. Do not multiply its sample size by six. If a shared-valid-
+subset oracle comparison is requested later, label it separately from this prespecified diagnostic.
+
+
+
+
+                                                   7 of 10
+JAMS controlled simulation protocol                                           Version 1.0 | November 22, 2026
+
+
+9    Validation, execution order, and stopping rule
+
+Complete engineering checks before opening aggregate production performance results. Use deterministic
+unit-test examples and the separate engineering stream, with a fixed five smoke-test replicate IDs across
+all six conditions. These 30 datasets test implementation only and are excluded from the 6,000 evaluation
+datasets. Their estimator ranking is not a pass/fail criterion.
+
+1. Censoring checks. Hand-check (D, C) = (2, 2), (3, 2), (1, 2): they must yield (K, I) =
+   (2, 0), (2, 1), (1, 0). Check nonnegative integer support and that censored observations use a
+   strict survival contribution.
+
+2. Likelihood checks. With every I = 0, M ’s objective and gradient must equal ordinary Poisson on
+   the same outcome. Compare strict Poisson tails against direct summation for small deterministic
+   cases. Verify the objective and gradients without hidden regularization or probability floors.
+
+3. Derivative checks. On fixed small datasets, compare analytic gradients with centered finite
+   differences; require scaled maximum discrepancy below 10−5 with scale 1 + ∥g∥∞ . Check the Hessian
+   against gradient differences to scale 10−4 . Also compare log-survival, score, and curvature in a
+   far-right-tail case, such as K = 1000, µ = 1, against a high-precision positive-tail sum. Record
+   precision, steps, and errors; moderate-only checks do not establish tail stability.
+
+4. Structural checks. All-censored and all-zero uncensored examples must be flagged as having no
+   finite maximum. Uncensored positive observations spanning the three design columns must pass.
+   Test a mixed example with an uncensored zero and missing positive-outcome support; check its LP
+   certificate against direct movement along that direction.
+
+5. Calibration and streams. Check all 24 population discrepancies, the independent-demand/capacity
+   identity at η = 0, identical demand across conditions within an ID, different streams across IDs, and
+   identical results when a small set of IDs is scheduled in a different worker order.
+
+6. Pairing and output checks. On hand-constructed loss arrays, verify median paired differences,
+   the nested paired Θ calculation, bootstrap multiplicities, and missing-fit eligibility. Verify that a
+   large finite loss is retained and failed fits remain in denominators.
+
+Freeze the configuration, calibration file, source commit, dependency versions, validation log, and seed
+mapping. Run IDs 1–1,000; retain all six conditions per ID and checkpoint by ID. A crashed job may
+resume only missing tasks under the same seeds and configuration. Then create summaries and the
+2,000 bootstrap iterations without any change to the design.
+Finish after the fixed budget. Do not add conditions, seeds, observations, estimators, starts,
+replicates, or sensitivity analyses because an effect is weak, negative, noisy, or inconsistent with the draft.
+Large failure rates are reportable outcomes. If the primary contrast is not estimable or its interval is
+wide, report that limitation and complete the package.
+A confirmed coding or numerical defect may justify a corrected implementation and a full rerun on the
+same scheduled IDs; preserve the original logs and document the defect and version change. This is
+correction of an invalid computation, not additional evidence. A substantive design change requires a
+separately documented amendment before a new run and must not be silently merged with this one.
+
+
+
+
+                                                   8 of 10
+JAMS controlled simulation protocol                                        Version 1.0 | November 22, 2026
+
+
+10     Results package to return
+
+Return one archive containing executable source, a short reproduction README, dependency versions,
+the frozen configuration, and the following machine-readable outputs. Include failure rows and unrounded
+values. CSV or Parquet is acceptable for tabular outputs; identify units in a data dictionary.
+
+File                         Unit / expected      Required contents
+                             size
+calibration.csv              24 rows              Stratum, η, q, λ, a, κ, achieved population
+                                                  probability, error estimates, root status
+datasets.csv                 6,000 rows           Replicate ID, condition, seed identifier, realized
+                                                  censoring overall/by stratum, uncensored counts,
+                                                  uncensored rank
+fits.csv                     13,000 rows          6,000 G, 6,000 M , 1,000 O records; status and flags,
+                                                  three coefficients, selected start, objective, gradient
+                                                  norm, iteration count, finite-maximum screen
+starts.csv                   All scheduled        Replicate/model/condition/start, attempted or
+                             starts               skipped reason, initialization, solver status, objective,
+                                                  gradient norm, iterations/evaluations
+losses.csv                   One row per fit      Three predicted lifts, three depth-specific absolute lift
+                                                  errors, average lift loss, two coefficient losses; missing
+                                                  with reasons for invalid fits
+information.csv              One row per M fit    Hessian entries where available, eigenvalues, condition
+                                                  number, diagnostic status, finite candidate flag
+paired.csv                   6,000 rows           Vηq membership, paired lift and coefficient differences,
+                                                  depth-specific differences, descriptive agreement
+                                                  category
+dependence.csv               3,000 rows           Replicate ID, q, Wq membership, within-ID difference
+                                                  Br,.6,q − Br,0,q
+bootstrap.csv                Statistic by         Bootstrap iteration, statistic/condition, value or
+                             iteration            missing status, eligible pair count
+summaries.csv                Statistic by         Point estimate, interval, Monte Carlo SE, original
+                             condition            valid count, usable bootstrap count; all table and
+                                                  narrative quantities
+Also include config.json, validation_log.txt, run_manifest.json, failure_summary.csv,
+and xx_mapping.csv. The manifest records the protocol version, commit, seeds/stream identifiers,
+environment, start/end times, task counts, and any deviations. The mapping file links every pending
+manuscript value to a named statistic, output column, unit, and valid denominator. Oracle rows have
+no condition identifier; they are unique by replicate ID.
+Archive the latent draws and generated arrays locally in a compressed reproducibility bundle, or retain
+an exact regeneration script with frozen dependencies, seed mapping, calibration, and checksums of
+generated arrays. The coauthor handoff must include sufficient information to reproduce any reported
+fit without a new random draw.
+
+
+
+
+                                                 9 of 10
+JAMS controlled simulation protocol                                         Version 1.0 | November 22, 2026
+
+
+11     Figures, manuscript completion, and handoff note
+
+Figure 5 must be generated from the actual outputs. Panel A uses the six ∆ηq values and
+their 95% intervals. Panel B shows the paired-difference distributions at q = .60, with medians and
+middle-80% ranges. Panel C shows all three Θq values and intervals, highlighting .60. Panel D shows
+100|Vηq |/1000. Display nonestimable quantities explicitly; do not remove a condition. Use one common,
+zero-centered comparison scale where appropriate; do not force the mock figure’s color limits or numerical
+pattern.
+Distinguish distribution ranges from intervals for medians. Export a vector PDF and a 300-dpi PNG
+with legible labels. Keep the same panel definitions even if the observed ranking differs from the mockup.
+The mock figure is a layout demonstration and supplies no target values, calibration inputs, or success
+criteria.
+Figure 4 remains a conceptual illustration in this protocol. Its coefficient clouds are fabricated.
+It explains the exact relationship
+
+                           L(d)
+                           b    − L⋆ (d) = exp(0.20 + d){exp(eP + ded ) − 1}.
+
+Retain an explicit illustrative label; do not describe those clouds as estimates from this experiment. The
+production outputs already retain the coefficients needed for a later empirical version, but choosing an
+attractive condition after seeing results is outside this protocol. No additional experiment is required to
+keep the clearly labeled conceptual illustration.
+Complete the pending text from evidence. Replace numerical placeholders in Table 6, Table A8,
+the controlled-comparison section, and Appendix F using the mapping file. Then revise the abstract,
+RQ2 summary, discussion, limitations, and conclusion to reflect the actual direction, uncertainty, and
+validity counts. Interpretive XX passages require prose; they cannot be filled by copying a single number.
+Keep new evidence distinct from the previously completed simulations.
+Interpret the experiment as a comparison under six specified synthetic conditions. It does not establish
+the true availability process in FreshRetailNet, prove that equal censoring implies equal identification,
+identify causal promotion effects, or establish optimal promotion policies. The additional experiment is
+supporting evidence for RQ2; its mere existence is not the paper’s novelty.
+Completion note to return with the archive. State whether validation and calibration passed;
+whether all 1,000 IDs were attempted in all six conditions; the primary estimate, interval, Monte Carlo
+SE, and valid denominator; total model failures by condition; whether conclusions are positive, negative,
+or inconclusive; and every implementation deviation. Do not omit adverse or nonestimable results.
+
+
+Implementation references
+
+The design and estimands above are specified for this manuscript. The following official software
+documentation supports implementation details, not a claim that the proposed experiment has been run.
+Accessed November 22, 2026.
+• NumPy: parallel random generation and SeedSequence.
+• SciPy: Poisson PMF, quantiles, and survival functions.
+• SciPy: L-BFGS-B controls.
+• SciPy: bracketed roots with Brent’s method; adaptive numerical integration.
+
+
+
+                                                 10 of 10
+

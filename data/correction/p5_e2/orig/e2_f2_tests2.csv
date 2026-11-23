@@ -1,0 +1,13 @@
+family,arm,param,coef,compare,point,ci_lo,ci_hi,n_cities,n_cells,p_raw,p_holm,sig_holm
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.0,p,m_minus_naive,-0.002719731713875479,-0.009907445617516008,0.008567546150269056,12,23,0.9085,1.0,False
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.0,p,m_minus_g,-0.025101606673651012,-0.0395961830014135,-0.013292285623189501,12,23,0.0,0.0,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.0,d,m_minus_naive,0.001005322155202601,-0.01088822657174041,0.029132585995995462,13,27,0.8085,1.0,False
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.0,d,m_minus_g,-0.01716188865527893,-0.035014590885073686,-0.003268392217895902,13,27,0.004,0.012,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.5,p,m_minus_naive,2.034933231377286,0.41208639836261696,5.695622815030682,12,23,0.0,0.0,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.5,p,m_minus_g,2.0828207833207193,0.39937034192128607,5.688529996532821,12,23,0.0025,0.012,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.5,d,m_minus_naive,0.8229407935148726,0.4777207847629288,1.369266415358152,13,27,0.0,0.0,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,0.5,d,m_minus_g,0.777600968441996,0.5299003660205979,1.1263593777833334,13,27,0.0,0.0,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,1.0,p,m_minus_naive,3.5443388925217434,2.7463495307670316,6.90343699178785,12,23,0.002,0.012,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,1.0,p,m_minus_g,3.594025869168563,2.6437781730308805,7.01523953421068,12,23,0.002,0.012,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,1.0,d,m_minus_naive,0.7028855864677732,0.6491568746381022,0.9906588759728563,13,27,0.0,0.0,True
+F2_nonignorable_m_vs_naive_g,A4_nonignorable,1.0,d,m_minus_g,0.7607776005622704,0.7140364606282681,0.9725182065716732,13,27,0.0,0.0,True

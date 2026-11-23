@@ -1,0 +1,12 @@
+--- main/06_risk_coverage_sim.py	2026-10-29 16:34:46.858528981 -0400
++++ correction_20261122/sandbox/main/06_risk_coverage_sim.py	2026-11-23 04:37:00.728921909 -0500
+@@ -203,7 +203,8 @@
+ def simulate():
+     decomp = pd.read_csv(os.path.join(HERE, 'decomp_cells.csv'))
+     beta_by_key = {(int(r['city']), int(r['cat'])): (float(r['beta_rec_promo']), float(r['beta_rec_depth']))
+-                   for r in decomp.to_dict('records')}
++                   for r in decomp.to_dict('records')
++                   if np.isfinite(r['beta_rec_promo']) and np.isfinite(r['beta_rec_depth'])}  # P5: valid corrected M only
+     all_keys = sorted(beta_by_key)
+     rng = np.random.default_rng(42)
+     n_sample = min(N_TARGET, len(all_keys))

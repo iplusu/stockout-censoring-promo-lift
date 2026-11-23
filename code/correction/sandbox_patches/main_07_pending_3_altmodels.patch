@@ -1,0 +1,44 @@
+--- correction_20261122/legacy/main/07_pending_3_altmodels.py	2026-11-07 15:24:49.363535633 -0500
++++ correction_20261122/sandbox/main/07_pending_3_altmodels.py	2026-11-23 03:32:19.390982192 -0500
+@@ -359,6 +359,41 @@
+     print('numerical checks OK (NB2 A/grad, ZIP recovery/grad)')
+ 
+ 
++# ======================= P5 correction override (correction_20261122/altmodels_corrected.py) =======================
++import altmodels_corrected as _alt, mfit_corrected as _mf  # noqa: E402
++
++
++def _starts(X, K, C, b0, aux):
++    b_irls = tobit.init_poisson_irls(X, K, C)
++    return [np.append(b0, aux) if b0 is not None and np.all(np.isfinite(b0)) else None, np.append(b_irls, aux)]
++
++
++def fit_nb2(X, K, C, b0, theta0=5.0, maxiter=5000):
++    st = [s for s in _starts(X, K, C, b0, np.log(theta0)) if s is not None]
++    o, _ = _mf.fit('NB2', X, np.asarray(K, float), np.asarray(C).astype(bool), st)
++    v = o['valid']; x = np.asarray(o['x']) if v else None
++    return dict(b=x[:-1] if v else np.full(X.shape[1], np.nan), theta=float(np.exp(x[-1])) if v else float('nan'),
++                ll=-o['objective'] * len(K) if v else float('nan'), nit=int(o.get('nit', 0)), success=v, converged=v,
++                grad_norm=o.get('g_orig', float('nan')) if v else float('nan'), status=o['status'])
++
++
++def fit_zip(X, K, C, b0, pi0=0.1, maxiter=5000):
++    st = [s for s in _starts(X, K, C, b0, np.log(pi0 / (1 - pi0))) if s is not None]
++    o, _ = _mf.fit('MIX', X, np.asarray(K, float), np.asarray(C).astype(bool), st)
++    v = o['valid']; x = np.asarray(o['x']) if v else None
++    return dict(b=x[:-1] if v else np.full(X.shape[1], np.nan), pi=float(1 / (1 + np.exp(-x[-1]))) if v else float('nan'),
++                ll=-o['objective'] * len(K) if v else float('nan'), nit=int(o.get('nit', 0)), success=v, converged=v,
++                grad_norm=o.get('g_orig', float('nan')) if v else float('nan'), status=o['status'])
++
++
++def recov_nb2(b, th, X, K, C):
++    return _alt.recov_nb2(b, th, X, K, C) if np.isfinite(th) else np.full(len(K), np.nan)
++
++
++def recov_zip(b, pi, X, K, C):
++    return _alt.recov_pois(b, X, K, C)
++# ==================================================================================================================
++
+ def main(selftest_n=None):
+     if selftest_n:
+         _numerical_checks()

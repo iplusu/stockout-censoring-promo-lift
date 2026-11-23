@@ -1,0 +1,29 @@
+--- correction_20261122/legacy/main/07_pending_4_jointci.py	2026-10-31 09:46:28.665265803 -0400
++++ correction_20261122/sandbox/main/07_pending_4_jointci.py	2026-11-23 04:37:00.728525871 -0500
+@@ -46,7 +46,7 @@
+ 
+ 
+ def pooled_q90(rows, cols):
+-    vals = [abs(float(r[c])) for r in rows for c in cols]
++    vals = [abs(v) for r in rows for c in cols for v in [m06._f(r[c])] if v is not None]  # P5: eligible cells only
+     if not vals:
+         return float('nan')
+     return float(np.percentile(vals, 90))
+@@ -69,7 +69,7 @@
+         ('P1b_promo_median_abs_bias_pct', by_city_decomp, lambda rows: m06.median_abs(rows, 'bias_pct_orig_promo')),
+         ('P1b_promo_pooled_q90_abs_bias_pct', by_city_decomp, lambda rows: pooled_q90(rows, ['bias_pct_orig_promo'])),
+         ('P1b_promo_frac_ge20', by_city_decomp, lambda rows: m06.frac_ge(rows, 'bias_pct_orig_promo', 0.20)),
+-        ('P1b_pooled_dp_median_abs_bias_pct', by_city_decomp, lambda rows: float(np.median(np.abs([float(r['bias_pct_orig_depth']) for r in rows] + [float(r['bias_pct_orig_promo']) for r in rows])))),
++        ('P1b_pooled_dp_median_abs_bias_pct', by_city_decomp, lambda rows: float(np.median(np.abs([v for r in rows for c in ('bias_pct_orig_depth', 'bias_pct_orig_promo') for v in [m06._f(r[c])] if v is not None])))),
+         ('P1b_pooled_dp_frac_ge20', by_city_decomp, lambda rows: _pooled_frac(rows, 0.20)),
+         ('pure_censoring_depth_median', by_city_decomp, lambda rows: m06.median_abs(rows, 'bias_pct_pure_censoring_depth')),
+         ('pure_censoring_depth_frac_ge20', by_city_decomp, lambda rows: m06.frac_ge(rows, 'bias_pct_pure_censoring_depth', 0.20)),
+@@ -85,7 +85,7 @@
+ 
+ 
+ def _pooled_frac(rows, thresh):
+-    vals = [abs(float(r['bias_pct_orig_depth'])) for r in rows] + [abs(float(r['bias_pct_orig_promo'])) for r in rows]
++    vals = [abs(v) for r in rows for c in ('bias_pct_orig_depth', 'bias_pct_orig_promo') for v in [m06._f(r[c])] if v is not None]
+     return sum(1 for v in vals if v >= thresh) / len(vals)
+ 
+ 

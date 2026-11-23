@@ -1,0 +1,14 @@
+--- correction_20261122/legacy/pilot/02_pilot.py	2026-10-28 20:24:51.192920910 -0400
++++ correction_20261122/sandbox/pilot/02_pilot.py	2026-11-23 03:25:26.096156282 -0500
+@@ -32,7 +32,10 @@
+               'holiday', 'activity', 'precpt_c', 'temp_c', 'hum_c', 'wind_c']
+     # ---------- 시간 배분 (hour-of-day 프로파일, uncensored일 기준) ----------
+     def apportion(Dhat):
+-        P = k_h[~C].mean(axis=0)                          # 24, uncensored일의 시간 형상
++        # P5 correction (instructions sec. 4): explicit Boolean mask; no uncensored row -> hourly result unavailable (NaN)
++        if not (C == 0).any():
++            return np.full(k_h.shape, np.nan)
++        P = k_h[C == 0].mean(axis=0)
+         L = np.maximum(Dhat - K, 0.0)
+         den = (ST * P[None, :]).sum(axis=1)               # censored일: 스톡아웃시간 형상 합
+         out = k_h.astype(np.float64).copy()
